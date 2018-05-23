@@ -5,12 +5,14 @@ const debug = require('debug')('BitMEX:realtime-api:socket:internal');
 const CLOSE_NORMAL = 1000;
 const CLOSE_UNEXPECTED = 1011;
 const CLOSE_DOWNTIME = 1012;
+const CLOSE_BAD_GATEWAY = 1013;
 
-function WebSocketClient(){
+function WebSocketClient(alwaysReconnect){
   this.initialAutoReconnectInterval = 1000;    // ms
   this.autoReconnectInterval = this.initialAutoReconnectInterval;
   this.maxAutoReconnectInterval = 60000; // maximum wait between reconnect retrys
   this.logConnection = true;
+  this.alwaysReconnect = alwaysReconnect || false;
 }
 WebSocketClient.prototype.open = function(url){
   this.url = url;
@@ -32,6 +34,7 @@ WebSocketClient.prototype.open = function(url){
         break;
       case CLOSE_UNEXPECTED:
         this.logError("WebSocket closed unexpectedly.");
+        reconnecting = this.alwaysReconnect;
         break;
       default:    // Abnormal closure
         this.logError(`WebSocket closed with code ${code}`);
@@ -74,6 +77,7 @@ WebSocketClient.prototype.open = function(url){
       if (response.statusCode === 401) {
         this.logError(`Authentication invalid. Please check your credentials. Message: ${buf}`);
         closeConnection(CLOSE_UNEXPECTED);
+
       } else if (response.statusCode === 502 || response.statusCode === 503) {
         // maintainence / downtime
         this.logError(`Server responded with [${response.statusCode}], will retry soon: ${buf}`);
@@ -106,6 +110,15 @@ WebSocketClient.prototype.logError = function() {
   console.error.apply(console, ['WebSocket [ERROR]:'].concat(args));
 }
 
+WebSocketClient.prototype.pause = function() {
+    this.instance.close(CLOSE_NORMAL, null);
+    this.instance = null;
+}
+
+WebSocketClient.prototype.resume = function() {
+    this.open(this.url);
+}
+
 WebSocketClient.prototype.send = function(data, option) {
   try{
     debug(data);
@@ -115,20 +128,20 @@ WebSocketClient.prototype.send = function(data, option) {
   }
 };
 WebSocketClient.prototype.reconnect = function(_code) {
-  this.log('Retry in ' + this.autoReconnectInterval + ' ms');
-  clearTimeout(this.reconnectTimeout);
-  this.reconnectTimeout = setTimeout(() => {
-    this.emit('reconnect');
-    // increase wait for next time to avoid spamming the server
-    if (this.autoReconnectInterval < this.maxAutoReconnectInterval) {
-      this.autoReconnectInterval *= 2;
-      if (this.autoReconnectInterval > this.maxAutoReconnectInterval)
-        this.autoReconnectInterval = this.maxAutoReconnectInterval;
-    }
-    this.instance.close(CLOSE_NORMAL, 'Reconnecting.');
-    this.log("Reconnecting...");
-    this.open(this.url);
-  }, this.autoReconnectInterval);
+   this.emit('reconnect');
+   this.log('Retry in ' + this.autoReconnectInterval + ' ms');
+   clearTimeout(this.reconnectTimeout);
+   this.reconnectTimeout = setTimeout(() => {
+      // increase wait for next time to avoid spamming the server
+      if (this.autoReconnectInterval < this.maxAutoReconnectInterval) {
+         this.autoReconnectInterval *= 2;
+         if (this.autoReconnectInterval > this.maxAutoReconnectInterval)
+            this.autoReconnectInterval = this.maxAutoReconnectInterval;
+      }
+      this.instance.close(CLOSE_NORMAL, 'Reconnecting.');
+      this.log(`Reconnecting...`);
+      this.open(this.url);
+   }, this.autoReconnectInterval);
 };
 
 module.exports = WebSocketClient;
