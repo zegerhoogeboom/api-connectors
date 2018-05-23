@@ -5,7 +5,6 @@ const debug = require('debug')('BitMEX:realtime-api:socket:internal');
 const CLOSE_NORMAL = 1000;
 const CLOSE_UNEXPECTED = 1011;
 const CLOSE_DOWNTIME = 1012;
-const CLOSE_BAD_GATEWAY = 1013;
 
 function WebSocketClient(alwaysReconnect){
   this.initialAutoReconnectInterval = 1000;    // ms
@@ -110,15 +109,6 @@ WebSocketClient.prototype.logError = function() {
   console.error.apply(console, ['WebSocket [ERROR]:'].concat(args));
 }
 
-WebSocketClient.prototype.pause = function() {
-    this.instance.close(CLOSE_NORMAL, null);
-    this.instance = null;
-}
-
-WebSocketClient.prototype.resume = function() {
-    this.open(this.url);
-}
-
 WebSocketClient.prototype.send = function(data, option) {
   try{
     debug(data);
@@ -128,7 +118,7 @@ WebSocketClient.prototype.send = function(data, option) {
   }
 };
 WebSocketClient.prototype.reconnect = function(_code) {
-   this.emit('reconnect');
+   this.instance.emit('reconnect');
    this.log('Retry in ' + this.autoReconnectInterval + ' ms');
    clearTimeout(this.reconnectTimeout);
    this.reconnectTimeout = setTimeout(() => {

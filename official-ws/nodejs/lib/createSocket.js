@@ -20,7 +20,7 @@ module.exports = function createSocket(options, bmexClient) {
     bmexClient.emit('open');
 
     // Have to regenerate endpoint on reconnection so we have a new nonce.
-    wsClient.addListener('reconnect', function() {
+    wsClient.instance.on('reconnect', function() {
       wsClient.url = makeEndpoint(options);
       debug('Reconnecting to BitMEX at ', wsClient.url);
     });
