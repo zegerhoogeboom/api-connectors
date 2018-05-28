@@ -3,6 +3,7 @@ const _ = require('lodash');
 const crypto = require('crypto');
 const querystring = require('querystring');
 
+const debug = require('debug')('BitMEX:realtime-api:socket');
 /**
  * Sign a message. hex( HMAC_SHA256(secret, verb + url + nonce + data) )
  * @param  {String} secret API secret.
@@ -28,6 +29,7 @@ module.exports.getWSAuthQuery = function getWSAuthQuery(apiKey, apiSecret) {
     'api-key': apiKey,
     'api-signature': module.exports(apiSecret, 'GET', '/realtime', nonce)
   };
+  debug("Connecting using nonce", nonce);
 
   return querystring.stringify(query);
 };

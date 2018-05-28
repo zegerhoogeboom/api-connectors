@@ -120,7 +120,6 @@ WebSocketClient.prototype.send = function(data, option) {
 };
 WebSocketClient.prototype.reconnect = function(_code) {
    this.instance.emit('reconnect');
-   this.url = makeEndpoint(options);
    this.log('Retry in ' + this.autoReconnectInterval + ' ms');
    clearTimeout(this.reconnectTimeout);
    this.reconnectTimeout = setTimeout(() => {
