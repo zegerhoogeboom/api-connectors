@@ -1,6 +1,7 @@
 'use strict';
 const WebSocket = require('ws');
 const debug = require('debug')('BitMEX:realtime-api:socket:internal');
+const signMessage = require('./signMessage');
 
 const CLOSE_NORMAL = 1000;
 const CLOSE_UNEXPECTED = 1011;
@@ -119,6 +120,7 @@ WebSocketClient.prototype.send = function(data, option) {
 };
 WebSocketClient.prototype.reconnect = function(_code) {
    this.instance.emit('reconnect');
+   this.url = makeEndpoint(options);
    this.log('Retry in ' + this.autoReconnectInterval + ' ms');
    clearTimeout(this.reconnectTimeout);
    this.reconnectTimeout = setTimeout(() => {
@@ -133,5 +135,13 @@ WebSocketClient.prototype.reconnect = function(_code) {
       this.open(this.url);
    }, this.autoReconnectInterval);
 };
+
+function makeEndpoint(options) {
+    let endpoint = options.endpoint;
+    if (options.apiKeyID && options.apiKeySecret) {
+        endpoint += '?' + signMessage.getWSAuthQuery(options.apiKeyID, options.apiKeySecret);
+    }
+    return endpoint;
+}
 
 module.exports = WebSocketClient;
