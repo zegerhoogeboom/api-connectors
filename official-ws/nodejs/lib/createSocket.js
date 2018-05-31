@@ -26,9 +26,12 @@ module.exports = function createSocket(options, bmexClient) {
     });
   };
 
-  wsClient.onclose = function() {
+  wsClient.onclose = function(reconnecting) {
     wsClient.opened = false;
     debug('Connection to BitMEX at', wsClient.url, 'closed.');
+    if (reconnecting) {
+        wsClient.url = makeEndpoint(options);
+    }
     bmexClient.emit('close');
   };
 

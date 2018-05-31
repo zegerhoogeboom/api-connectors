@@ -41,7 +41,7 @@ WebSocketClient.prototype.open = function(url){
         reconnecting = true;
         break;
     }
-    this.onclose(code);
+    this.onclose(code, reconnecting);
     if (reconnecting) {
       this.reconnect(code);
     } else {
