@@ -153,6 +153,28 @@ BitMEXClient.prototype.addStream = function(symbol, tableName, callback) {
   addStreamHelper(client, symbol, tableName, callback);
 };
 
+BitMEXClient.prototype.addRawStream = function(symbol, tableName) {
+    const client = this;
+    if (!this.initialized) {
+        return this.once('initialize', () => client.addRawStream(symbol, tableName));
+    }
+    if (!this.socket.opened) {
+        // Not open yet. Call this when open
+        return this.socket.once('open', () => client.addRawStream(symbol, tableName))
+    }
+
+    else if (client.streams.all.indexOf(tableName) === -1) {
+        throw new Error('Unknown table for BitMEX subscription: ' + tableName +
+            '. Available tables are ' + client.streams.all + '.');
+    }
+
+    const openSubscription = () => client.sendSubscribeRequest(tableName, symbol);
+    // If we reconnect, will need to reopen.
+    client.on('open', openSubscription);
+    // If we're already opened, prime the pump (I made that up)
+    if (client.socket.opened) openSubscription();
+};
+
 BitMEXClient.prototype._setupListenerTracking = function() {
   // Keep track of listeners.
   const listenerTree = this._listenerTree = {};
